@@ -62,10 +62,53 @@ export function extractPageMeta(html, baseUrl) {
     }
   });
 
+  const videos = [];
+
+  // Native HTML5: <video src> and <video><source src>
+  $('video[src]').each((_, el) => {
+    try { videos.push(new URL($(el).attr('src'), baseUrl).href); } catch {}
+  });
+  $('video source[src]').each((_, el) => {
+    try { videos.push(new URL($(el).attr('src'), baseUrl).href); } catch {}
+  });
+
+  // YouTube / Vimeo iframes
+  $('iframe[src]').each((_, el) => {
+    const src = $(el).attr('src') || '';
+    if (src.includes('youtube.com') || src.includes('youtu.be') || src.includes('vimeo.com')) {
+      try { videos.push(new URL(src, baseUrl).href); } catch {}
+    }
+  });
+
+  // Open Graph video tag
+  const ogVideo = $('meta[property="og:video"]').attr('content') ||
+                  $('meta[property="og:video:url"]').attr('content');
+  if (ogVideo) {
+    try { videos.push(new URL(ogVideo, baseUrl).href); } catch {}
+  }
+
+  // JSON-LD: extract contentUrl / embedUrl from VideoObject entries
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      const data = JSON.parse($(el).html());
+      const entries = Array.isArray(data) ? data : [data];
+      for (const entry of entries) {
+        const isVideo =
+          entry['@type'] === 'VideoObject' ||
+          (Array.isArray(entry['@type']) && entry['@type'].includes('VideoObject'));
+        if (isVideo) {
+          if (entry.contentUrl) videos.push(entry.contentUrl);
+          if (entry.embedUrl) videos.push(entry.embedUrl);
+        }
+      }
+    } catch {}
+  });
+
   return {
     title,
     description,
     bodyText: rawText,
     links: [...new Set(links)],
+    videos: [...new Set(videos)],
   };
 }

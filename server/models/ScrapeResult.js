@@ -17,6 +17,7 @@ const scrapeResultSchema = new mongoose.Schema({
   description: String,
   bodyText: String,
   links: { type: [String], default: [] },
+  videos: { type: [String], default: [] },
   scrapedAt: { type: Date, default: Date.now },
 });
 

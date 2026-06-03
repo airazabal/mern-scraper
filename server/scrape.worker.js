@@ -42,12 +42,13 @@ const worker = new Worker(
         description: meta.description,
         bodyText: meta.bodyText,
         links: meta.links,
+        videos: meta.videos,
         scrapedAt: new Date(),
       },
       { upsert: true, new: true }
     );
 
-    return { count: items.length, rejected, links: meta.links.length };
+    return { count: items.length, rejected, links: meta.links.length, videos: meta.videos.length };
   },
   { connection, concurrency: 2 }
 );

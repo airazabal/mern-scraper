@@ -63,6 +63,78 @@ test('extractPageMeta: strips scripts from bodyText', () => {
   assert.ok(meta.bodyText.includes('Real content'));
 });
 
+// ── video extraction ──────────────────────────────────────────────────────────
+
+test('extractPageMeta: extracts native <video src>', () => {
+  const html = `<html><body><video src="/clip.mp4"></video></body></html>`;
+  const { videos } = extractPageMeta(html, 'https://example.com');
+  assert.ok(videos.includes('https://example.com/clip.mp4'), `videos: ${videos}`);
+});
+
+test('extractPageMeta: extracts <source> inside <video>', () => {
+  const html = `<html><body><video><source src="/a.webm"><source src="/b.mp4"></video></body></html>`;
+  const { videos } = extractPageMeta(html, 'https://example.com');
+  assert.ok(videos.includes('https://example.com/a.webm'));
+  assert.ok(videos.includes('https://example.com/b.mp4'));
+});
+
+test('extractPageMeta: extracts YouTube iframe', () => {
+  const html = `<html><body>
+    <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>
+  </body></html>`;
+  const { videos } = extractPageMeta(html, 'https://example.com');
+  assert.ok(videos.some((v) => v.includes('youtube.com')));
+});
+
+test('extractPageMeta: extracts Vimeo iframe', () => {
+  const html = `<html><body>
+    <iframe src="https://player.vimeo.com/video/123456"></iframe>
+  </body></html>`;
+  const { videos } = extractPageMeta(html, 'https://example.com');
+  assert.ok(videos.some((v) => v.includes('vimeo.com')));
+});
+
+test('extractPageMeta: extracts og:video meta tag', () => {
+  const html = `<html><head>
+    <meta property="og:video" content="https://cdn.example.com/video.mp4">
+  </head><body></body></html>`;
+  const { videos } = extractPageMeta(html, 'https://example.com');
+  assert.ok(videos.includes('https://cdn.example.com/video.mp4'));
+});
+
+test('extractPageMeta: extracts VideoObject contentUrl from JSON-LD', () => {
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: 'Test Video',
+    contentUrl: 'https://cdn.example.com/test.mp4',
+    embedUrl: 'https://example.com/embed/123',
+  });
+  const html = `<html><head>
+    <script type="application/ld+json">${ld}</script>
+  </head><body></body></html>`;
+  const { videos } = extractPageMeta(html, 'https://example.com');
+  assert.ok(videos.includes('https://cdn.example.com/test.mp4'));
+  assert.ok(videos.includes('https://example.com/embed/123'));
+});
+
+test('extractPageMeta: deduplicates video URLs', () => {
+  const html = `<html><body>
+    <video src="/same.mp4"></video>
+    <video src="/same.mp4"></video>
+  </body></html>`;
+  const { videos } = extractPageMeta(html, 'https://example.com');
+  assert.equal(videos.filter((v) => v.includes('same.mp4')).length, 1);
+});
+
+test('extractPageMeta: non-video iframes are ignored', () => {
+  const html = `<html><body>
+    <iframe src="https://maps.google.com/embed"></iframe>
+  </body></html>`;
+  const { videos } = extractPageMeta(html, 'https://example.com');
+  assert.equal(videos.length, 0);
+});
+
 // ── parseItems ────────────────────────────────────────────────────────────────
 
 test('parseItems: throws when no rows match selector', () => {
