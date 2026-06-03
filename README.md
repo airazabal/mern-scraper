@@ -135,6 +135,7 @@ Open **http://localhost:5173** in your browser.
 2. If the URL is already cached and fresh, results appear immediately.
 3. If stale or unseen, the API returns `202 Pending` and the worker starts scraping. The UI polls every 3 seconds and updates automatically when results are ready.
 4. Structured item extraction uses CSS selectors in `server/scraper/parser.js` — adjust `.table-row`, `.rank`, and `.name` to match your target site.
+5. Each scraped result also includes a `videos[]` array — see [Video extraction](#video-extraction) below.
 
 ### Agent tab
 
@@ -177,6 +178,25 @@ Claude calls `record_items` and `finish_goal` in the same turn once the goal is 
 
 ---
 
+## Video extraction
+
+Every scrape automatically extracts video URLs into `ScrapeResult.videos[]` and returns them in the API response alongside `items[]`.
+
+| Source | Detected | Notes |
+|---|---|---|
+| `<video src="...">` | ✅ | Direct `.mp4`, `.webm`, `.ogg`, etc. |
+| `<video><source src="...">` | ✅ | All `<source>` children |
+| YouTube / Vimeo / Dailymotion `<iframe>` | ✅ | Returns embed URL |
+| `og:video` / `og:video:url` meta tag | ✅ filtered | Non-video URLs (e.g. login redirects) stripped |
+| JSON-LD `VideoObject.contentUrl` | ✅ trusted | Site-declared structured data, no filtering |
+| JSON-LD `VideoObject.embedUrl` | ✅ trusted | Same |
+| JS-rendered `<video>` (SPAs) | ⚠️ needs Playwright | Static fetch won't see dynamically set `src` attrs |
+| YouTube / Netflix actual streams | ❌ | Encrypted / DRM — outside HTML scraping |
+
+URLs from `og:video` and iframes are validated against a known video extension/host allowlist before being kept. JSON-LD `VideoObject` entries are trusted unconditionally since the site explicitly declared them as video content.
+
+---
+
 ## Running tests
 
 ```bash
@@ -184,7 +204,7 @@ cd server
 npm test
 ```
 
-23 unit tests covering the Zod schemas, cheerio parser, and the `looksUnrendered` heuristic that decides whether to fall back from axios to Playwright.
+33 unit tests covering the Zod schemas, cheerio parser, video URL extraction, and the `looksUnrendered` heuristic that decides whether to fall back from axios to Playwright.
 
 ---
 
@@ -196,7 +216,7 @@ server/
   scrape.worker.js        BullMQ worker — fetch → parse → upsert (concurrency 2)
   config/index.js         Env-backed config
   models/
-    ScrapeResult.js       target, items, links, title, bodyText, scrapedAt
+    ScrapeResult.js       target, items, videos, links, title, bodyText, scrapedAt
     AgentSession.js       goal, status, frontier, visited, collectedItems, log
   queue/
     connection.js         ioredis connection (maxRetriesPerRequest: null)
