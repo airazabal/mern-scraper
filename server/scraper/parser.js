@@ -62,32 +62,41 @@ export function extractPageMeta(html, baseUrl) {
     }
   });
 
-  const videos = [];
+  const VIDEO_EXTS = /\.(mp4|webm|ogg|ogv|mov|avi|mkv|m3u8|mpd)(\?|$)/i;
+  const VIDEO_HOSTS = /^https?:\/\/(www\.)?(youtube\.com\/embed|youtu\.be|player\.vimeo\.com|vimeo\.com\/video|dailymotion\.com\/embed)/i;
+
+  function isVideoUrl(url) {
+    return VIDEO_EXTS.test(url) || VIDEO_HOSTS.test(url);
+  }
+
+  const rawVideos = [];
+  // JSON-LD VideoObject URLs are explicitly declared as video by the site — trusted, skip filter
+  const trustedVideos = [];
 
   // Native HTML5: <video src> and <video><source src>
   $('video[src]').each((_, el) => {
-    try { videos.push(new URL($(el).attr('src'), baseUrl).href); } catch {}
+    try { rawVideos.push(new URL($(el).attr('src'), baseUrl).href); } catch {}
   });
   $('video source[src]').each((_, el) => {
-    try { videos.push(new URL($(el).attr('src'), baseUrl).href); } catch {}
+    try { rawVideos.push(new URL($(el).attr('src'), baseUrl).href); } catch {}
   });
 
   // YouTube / Vimeo iframes
   $('iframe[src]').each((_, el) => {
     const src = $(el).attr('src') || '';
     if (src.includes('youtube.com') || src.includes('youtu.be') || src.includes('vimeo.com')) {
-      try { videos.push(new URL(src, baseUrl).href); } catch {}
+      try { rawVideos.push(new URL(src, baseUrl).href); } catch {}
     }
   });
 
-  // Open Graph video tag
+  // Open Graph video tag — filtered (sites sometimes put auth redirects here)
   const ogVideo = $('meta[property="og:video"]').attr('content') ||
                   $('meta[property="og:video:url"]').attr('content');
   if (ogVideo) {
-    try { videos.push(new URL(ogVideo, baseUrl).href); } catch {}
+    try { rawVideos.push(new URL(ogVideo, baseUrl).href); } catch {}
   }
 
-  // JSON-LD: extract contentUrl / embedUrl from VideoObject entries
+  // JSON-LD VideoObject — trusted: the site explicitly declared these as video
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
       const data = JSON.parse($(el).html());
@@ -97,18 +106,25 @@ export function extractPageMeta(html, baseUrl) {
           entry['@type'] === 'VideoObject' ||
           (Array.isArray(entry['@type']) && entry['@type'].includes('VideoObject'));
         if (isVideo) {
-          if (entry.contentUrl) videos.push(entry.contentUrl);
-          if (entry.embedUrl) videos.push(entry.embedUrl);
+          if (entry.contentUrl) trustedVideos.push(entry.contentUrl);
+          if (entry.embedUrl) trustedVideos.push(entry.embedUrl);
         }
       }
     } catch {}
   });
+
+  const videos = [
+    ...new Set([
+      ...[...new Set(rawVideos)].filter(isVideoUrl),
+      ...trustedVideos,
+    ]),
+  ];
 
   return {
     title,
     description,
     bodyText: rawText,
     links: [...new Set(links)],
-    videos: [...new Set(videos)],
+    videos,
   };
 }

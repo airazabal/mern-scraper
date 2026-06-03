@@ -135,6 +135,22 @@ test('extractPageMeta: non-video iframes are ignored', () => {
   assert.equal(videos.length, 0);
 });
 
+test('extractPageMeta: filters out non-video URLs from og:video (e.g. login redirects)', () => {
+  const html = `<html><head>
+    <meta property="og:video" content="https://accounts.google.com/ServiceLogin?continue=https://youtube.com">
+  </head><body></body></html>`;
+  const { videos } = extractPageMeta(html, 'https://youtube.com');
+  assert.equal(videos.length, 0);
+});
+
+test('extractPageMeta: keeps valid embed URLs from og:video', () => {
+  const html = `<html><head>
+    <meta property="og:video" content="https://www.youtube.com/embed/dQw4w9WgXcQ">
+  </head><body></body></html>`;
+  const { videos } = extractPageMeta(html, 'https://youtube.com');
+  assert.ok(videos.includes('https://www.youtube.com/embed/dQw4w9WgXcQ'));
+});
+
 // ── parseItems ────────────────────────────────────────────────────────────────
 
 test('parseItems: throws when no rows match selector', () => {

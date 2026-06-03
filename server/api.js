@@ -30,13 +30,14 @@ app.get('/api/data', async (req, res) => {
   const doc = await ScrapeResult.findOne({ target });
 
   if (isFresh(doc)) {
-    return res.json({ status: 'ready', scrapedAt: doc.scrapedAt, items: doc.items });
+    return res.json({ status: 'ready', scrapedAt: doc.scrapedAt, items: doc.items, videos: doc.videos ?? [] });
   }
 
   await enqueueScrape(target);
   return res.status(202).json({
     status: 'pending',
     items: doc?.items ?? [],
+    videos: doc?.videos ?? [],
     scrapedAt: doc?.scrapedAt ?? null,
   });
 });
