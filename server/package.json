@@ -1,0 +1,29 @@
+{
+  "name": "mern-scraper-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "api": "node api.js",
+    "worker": "node scrape.worker.js",
+    "dev:api": "nodemon api.js",
+    "dev:worker": "nodemon scrape.worker.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "axios": "^1.6.0",
+    "bullmq": "^5.0.0",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "ioredis": "^5.3.2",
+    "mongoose": "^8.0.0",
+    "playwright": "^1.40.0",
+    "uuid": "^9.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
