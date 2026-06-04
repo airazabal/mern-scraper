@@ -27,6 +27,18 @@ client (React + TanStack Query)
 
 ---
 
+## Screenshots
+
+**Scraper tab** — paste a URL and get structured results instantly (served from cache) or queued for scraping:
+
+![Scraper tab](docs/screenshot.png)
+
+**Agent tab** — define a natural-language goal and let Claude crawl autonomously:
+
+![Agent tab](docs/screenshot-agent.png)
+
+---
+
 ## Prerequisites
 
 | Requirement | Version | Notes |
