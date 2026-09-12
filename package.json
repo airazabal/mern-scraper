@@ -2,10 +2,11 @@
   "name": "mern-scraper",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "Root orchestration scripts for mern-scraper (infra, server, client).",
   "scripts": {
     "setup": "npm install --prefix server && npx --prefix server playwright install chromium && npm install --prefix client && node scripts/ensure-env.js",
-    "infra": "docker compose up -d",
+    "infra": "node scripts/check-ports.js && docker compose up -d",
     "infra:down": "docker compose down",
     "redis:flush": "docker compose exec -T redis redis-cli FLUSHALL",
     "dev": "npm run infra && concurrently -k -n API,WORKER,CLIENT -c blue,magenta,green \"wait-on tcp:27017 tcp:6379 && npm run api --prefix server\" \"wait-on tcp:27017 tcp:6379 && npm run worker --prefix server\" \"npm run dev --prefix client\"",
