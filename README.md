@@ -50,45 +50,64 @@ client (React + TanStack Query)
 
 ---
 
-## Installation
+## Installation & running (quick start)
 
-### 1. Clone
+Requires Docker (for Mongo/Redis) and Node ≥ 20.
 
 ```bash
 git clone https://github.com/airazabal/mern-scraper.git
 cd mern-scraper
+npm install     # root orchestration deps (concurrently, wait-on)
+npm run setup   # installs server + client deps, playwright chromium, creates server/.env
 ```
 
-### 2. Start infrastructure
+Then edit `server/.env` and set `ANTHROPIC_API_KEY` (required for the goal agent only).
 
-**Option A — Docker (recommended)**
 ```bash
+npm run dev
+```
+
+This starts Mongo + Redis (`docker compose up -d`), waits for them to accept connections, then runs the API, worker, and Vite dev server together in one terminal, each line prefixed `[API]` / `[WORKER]` / `[CLIENT]`. Ctrl-C stops all three. Open **http://localhost:5173**.
+
+Other root scripts:
+
+| Command | Effect |
+|---|---|
+| `npm run infra` | Start just Mongo + Redis in the background |
+| `npm run infra:down` | Stop and remove the Mongo/Redis containers (data volumes persist) |
+| `npm run redis:flush` | Wipe the Redis queue (clears leftover/retrying scrape jobs; Mongo cache & agent history untouched) |
+| `npm run dev:clean` | Like `npm run dev`, but flushes Redis first — use for a clean-slate session with no resumed jobs |
+| `npm test` | Run the server test suite |
+
+<details>
+<summary>Manual install/run (no Docker, or one process per terminal)</summary>
+
+### Install
+
+```bash
+git clone https://github.com/airazabal/mern-scraper.git
+cd mern-scraper
+
+# Infra — Docker...
 docker compose up -d
-```
-
-**Option B — Homebrew (macOS)**
-```bash
+# ...or Homebrew (macOS)
 brew tap mongodb/brew
 brew install mongodb-community redis
 brew services start mongodb/brew/mongodb-community
 brew services start redis
-```
 
-### 3. Install server dependencies
-
-```bash
+# Server
 cd server
 npm install
 npx playwright install chromium   # only needed for JS-rendered pages
+cp .env.example .env              # then edit ANTHROPIC_API_KEY etc.
+
+# Client
+cd ../client
+npm install
 ```
 
-### 4. Configure environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
+`server/.env`:
 
 ```env
 PORT=4000
@@ -100,42 +119,32 @@ MIN_REQUEST_DELAY_MS=1500    # per-domain politeness throttle
 ANTHROPIC_API_KEY=sk-ant-... # required for the goal agent
 ```
 
-### 5. Install client dependencies
+### Run
 
-```bash
-cd ../client
-npm install
-```
-
----
-
-## Running
-
-You need **three terminals** (or use a process manager like `pm2`).
+You need **three terminals** (or a process manager like `pm2`).
 
 **Terminal 1 — API server**
 ```bash
-cd server
-npm run api
+cd server && npm run api
 # [api] connected to mongo
 # [api] listening on :4000
 ```
 
 **Terminal 2 — Scrape worker**
 ```bash
-cd server
-npm run worker
+cd server && npm run worker
 # [worker] connected to mongo
 ```
 
 **Terminal 3 — React dev server**
 ```bash
-cd client
-npm run dev
+cd client && npm run dev
 # VITE ready → http://localhost:5173
 ```
 
 Open **http://localhost:5173** in your browser.
+
+</details>
 
 ---
 
